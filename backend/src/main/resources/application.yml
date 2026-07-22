@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: signflow
+
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+
+server:
+  port: 8080
+
+signflow:
+  certificate:
+    path: classpath:certificates/signflow-test.p12
+    password: signflow123
+    alias: signflow-test
