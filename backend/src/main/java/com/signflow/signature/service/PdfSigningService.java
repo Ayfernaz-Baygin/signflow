@@ -24,6 +24,10 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+import eu.europa.esig.dss.pdf.pdfbox.PdfBoxNativeObjectFactory;
+
+import com.signflow.signature.dto.SignatureCoordinateRequest;
+
 @Service
 public class PdfSigningService {
 
@@ -88,10 +92,14 @@ public class PdfSigningService {
                             "document.pdf"
                     );
 
-            PAdESService padesService =
-                    new PAdESService(
-                            new CommonCertificateVerifier()
-                    );
+           PAdESService padesService =
+        new PAdESService(
+                new CommonCertificateVerifier()
+        );
+
+padesService.setPdfObjFactory(
+        new PdfBoxNativeObjectFactory()
+);
 
             ToBeSigned dataToSign =
                     padesService.getDataToSign(
@@ -128,6 +136,48 @@ public class PdfSigningService {
             );
         }
     }
+
+
+    public byte[] signMultiple(
+        byte[] pdfBytes,
+        List<SignatureCoordinateRequest> signatures
+) {
+    if (pdfBytes == null || pdfBytes.length == 0) {
+        throw new IllegalArgumentException(
+                "İmzalanacak PDF boş olamaz."
+        );
+    }
+
+    if (signatures == null || signatures.isEmpty()) {
+        throw new IllegalArgumentException(
+                "En az bir imza alanı belirtilmelidir."
+        );
+    }
+
+    byte[] currentPdf = pdfBytes;
+
+    for (
+            SignatureCoordinateRequest signature
+            : signatures
+    ) {
+        if (signature == null) {
+            throw new IllegalArgumentException(
+                    "İmza alanı boş olamaz."
+            );
+        }
+
+        currentPdf = sign(
+                currentPdf,
+                signature.page(),
+                signature.x(),
+                signature.y(),
+                signature.width(),
+                signature.height()
+        );
+    }
+
+    return currentPdf;
+}
 
     private PAdESSignatureParameters createSignatureParameters(
             DSSPrivateKeyEntry privateKey,

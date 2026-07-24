@@ -1,4 +1,8 @@
-import { useRef, useState } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import {
   Box,
@@ -17,9 +21,26 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url,
 ).toString();
 
+type ExistingSignatureArea = {
+  pageNumber: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 type PdfViewerProps = {
   file: File | null;
-  onSignatureChange: (signatureBox: SignatureBox | null) => void;
+
+  onSignatureChange: (
+    signatureBox: SignatureBox | null,
+  ) => void;
+
+  existingSignatureAreas?: ExistingSignatureArea[];
+
+  onOverlapChange?: (
+    isOverlapping: boolean,
+  ) => void;
 };
 
 const DEFAULT_SIGNATURE_WIDTH = 250;
@@ -31,6 +52,8 @@ const MIN_SIGNATURE_HEIGHT = 80;
 function PdfViewer({
   file,
   onSignatureChange,
+  existingSignatureAreas = [],
+  onOverlapChange,
 }: PdfViewerProps) {
   const pageContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -55,6 +78,25 @@ function PdfViewer({
 
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+
+  const isSignatureOverlapping =
+  signatureBox !== null &&
+  existingSignatureAreas.some(
+    (existingArea) =>
+      isOverlapping(
+        signatureBox,
+        existingArea,
+      ),
+  );
+
+useEffect(() => {
+  onOverlapChange?.(
+    isSignatureOverlapping,
+  );
+}, [
+  isSignatureOverlapping,
+  onOverlapChange,
+]);
 
   const updateSignatureBox = (
     nextSignatureBox: SignatureBox | null,
@@ -390,10 +432,20 @@ function PdfViewer({
                   height: signatureBox.height,
                   p: 1.5,
                   border: '2px solid',
-                  borderColor: 'primary.main',
-                  borderRadius: 1.5,
-                  backgroundColor: 'rgba(255, 255, 255, 0.96)',
-                  boxShadow: '0 8px 24px rgba(16, 24, 40, 0.18)',
+                  borderColor:
+  isSignatureOverlapping
+    ? 'error.main'
+    : 'primary.main',
+
+backgroundColor:
+  isSignatureOverlapping
+    ? 'rgba(255, 235, 238, 0.97)'
+    : 'rgba(255, 255, 255, 0.96)',
+
+boxShadow:
+  isSignatureOverlapping
+    ? '0 8px 24px rgba(211, 47, 47, 0.25)'
+    : '0 8px 24px rgba(16, 24, 40, 0.18)',
                   cursor: isDragging ? 'grabbing' : 'grab',
                   userSelect: 'none',
                   touchAction: 'none',
@@ -424,24 +476,34 @@ function PdfViewer({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        backgroundColor: 'success.main',
+                        backgroundColor:
+  isSignatureOverlapping
+    ? 'error.main'
+    : 'success.main',
                         color: '#FFFFFF',
                         fontSize: 15,
                         fontWeight: 800,
                         flexShrink: 0,
                       }}
                     >
-                      ✓
+                     {isSignatureOverlapping
+  ? '!'
+  : '✓'}
                     </Box>
 
                     <Typography
                       variant="body2"
                       sx={{
                         fontWeight: 800,
-                        color: 'primary.main',
+                        color:
+                          isSignatureOverlapping
+                            ? 'error.main'
+                            : 'primary.main',
                       }}
                     >
-                      ELEKTRONİK OLARAK İMZALANACAK
+                      {isSignatureOverlapping
+                        ? 'İMZA ALANI ÇAKIŞIYOR'
+                        : 'ELEKTRONİK OLARAK İMZALANACAK'}
                     </Typography>
                   </Stack>
 
@@ -463,7 +525,9 @@ function PdfViewer({
                       color: 'text.secondary',
                     }}
                   >
-                    Sertifika bilgileri imzalama sırasında eklenecek
+                    {isSignatureOverlapping
+                      ? 'Bu alan mevcut bir imza alanıyla üst üste geliyor.'
+                      : 'Sertifika bilgileri imzalama sırasında eklenecek'}
                   </Typography>
                 </Stack>
 
@@ -490,7 +554,10 @@ function PdfViewer({
                       height: 10,
                       borderRight: '3px solid',
                       borderBottom: '3px solid',
-                      borderColor: 'primary.main',
+                      borderColor:
+                        isSignatureOverlapping
+                          ? 'error.main'
+                          : 'primary.main',
                     },
                   }}
                 />
@@ -546,6 +613,29 @@ function PdfViewer({
         </Typography>
       )}
     </Stack>
+  );
+}
+
+function isOverlapping(
+  first: ExistingSignatureArea,
+  second: ExistingSignatureArea,
+): boolean {
+  if (
+    first.pageNumber !==
+    second.pageNumber
+  ) {
+    return false;
+  }
+
+  return (
+    first.x <
+      second.x + second.width &&
+    first.x + first.width >
+      second.x &&
+    first.y <
+      second.y + second.height &&
+    first.y + first.height >
+      second.y
   );
 }
 
