@@ -23,3 +23,10 @@ Thumbs.db
 
 # IntelliJ
 *.iml
+
+# Certificates and private keys
+backend/src/main/resources/certificates/*.p12
+backend/src/main/resources/certificates/*.pfx
+backend/src/main/resources/certificates/*.jks
+backend/src/main/resources/certificates/*.pem
+backend/src/main/resources/certificates/*.key
